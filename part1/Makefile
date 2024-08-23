@@ -1,46 +1,48 @@
 # Compiler and flags
 CC := gcc
-CFLAGS := -Wall -Wextra -pedantic
-LDFLAGS :=
+CFLAGS := -Wall -Wextra -pedantic -I./include
 
 # Directories
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
 
-# Find all .c files in the source directory
+# Source files
 SRCS := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-# Define the target executable
-TARGET := $(BIN_DIR)/hw1
+# Target executable
+TARGET := $(BIN_DIR)/main
 
 # Default target
-all: directories $(TARGET)
+all: $(TARGET) compile_commands.json
 
-# Rule to create necessary directories
-directories:
-	@mkdir -p $(SRC_DIR) $(OBJ_DIR) $(BIN_DIR)
-
-# Rule to build the target
+# Linking the target executable
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(OBJS) -o $@
 
-# Rule to compile source files
+# Compiling object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to clean the build artifacts
+# Generate compile_commands.json for LSP
+compile_commands.json: $(SRCS)
+	@echo "[" > $@
+	@for src in $(SRCS); do \
+		echo "  {" >> $@; \
+		echo "    \"directory\": \"$(CURDIR)\"," >> $@; \
+		echo "    \"command\": \"$(CC) $(CFLAGS) -c $$src -o $(OBJ_DIR)/$$(basename $$src .c).o\"," >> $@; \
+		echo "    \"file\": \"$$src\"" >> $@; \
+		echo "  }," >> $@; \
+	done
+	@sed -i '' '$$s/,$$//' $@
+	@echo "]" >> $@
+
+# Cleaning up
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) compile_commands.json
 
-# Rule to generate compile_commands.json for clangd LSP
-compile_commands.json: Makefile
-	@echo '[' > $@
-	@for src in $(SRCS); do \
-		echo '{"directory":"$(CURDIR)","command":"$(CC) $(CFLAGS) -c $$src -o $(OBJ_DIR)/$$(basename $$src .c).o","file":"$$src"},' >> $@; \
-	done
-	@sed '$$s/,$$//' $@ > $@.tmp && mv $@.tmp $@
-	@echo ']' >> $@
-
-.PHONY: all directories clean
+# Phony targets
+.PHONY: all clean
