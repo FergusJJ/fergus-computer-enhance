@@ -11,4 +11,6 @@ void copy_buffer(char *copy_buf, int copy_buf_len);
 
 int scratch_buffer_len(void);
 
+void print_scratch_buffer(void);
+
 #endif

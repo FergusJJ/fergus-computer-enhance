@@ -28,7 +28,7 @@ Mode get_mode(const uint8_t mod, const uint8_t reg) {
     // MOV AH, CH    (when wide = 0)
 
   default:
-    return NULL;
+    return MODE_NULL;
     // This case should never occur in valid 8086 instructions
   }
 }
@@ -107,6 +107,36 @@ Opcode parse_opcode(uint8_t byt) {
   return NO_OP;
 }
 
+void show_opcode(Opcode opcode) {
+  switch (opcode) {
+  case MOV_RM_R:
+    printf("MOV_RM_R\n");
+    break;
+  case MOV_I_RM:
+    printf("MOV_I_RM\n");
+    break;
+  case MOV_I_R:
+    printf("MOV_I_R\n");
+    break;
+  case MOV_M_A:
+    printf("MOV_M_A\n");
+    break;
+  case MOV_A_M:
+    printf("MOV_A_M\n");
+    break;
+  case MOV_RM_SR:
+    printf("MOV_RM_SR\n");
+    break;
+  case MOV_SR_RM:
+    printf("MOV_SR_RM\n");
+    break;
+  case NO_OP:
+    printf("NO_OP\n");
+    break;
+  }
+  return;
+}
+
 char *effective_addr_reg(uint8_t rm) {
   switch (rm) {
   case 0x0:
@@ -167,63 +197,118 @@ int calc_rm(const Mode mode, const uint8_t rm_bits, const uint8_t wide_bit,
 typedef DecodedInstruction *(*InstructionParser)(uint8_t *);
 
 DecodedInstruction *mov_rm_r_parse(uint8_t *bytes) {
+
+  printf("mov_rm_r_parse\n");
   DecodedInstruction *decodedInstruction =
       (DecodedInstruction *)malloc(sizeof(DecodedInstruction));
   write_scratch_buffer("MOV ");
 
   uint8_t byte_one = bytes[0];
   uint8_t direction_bit = (byte_one >> 1) & 0x1;
-  uint8_t wide_bit = byte_one & 0x1;
-  uint8_t mode_bits = bytes[1] & 0xc0;
-  uint8_t reg_bits = bytes[1] & 0x38;
+  uint8_t w_bit = byte_one & 0x1;
+  uint8_t mode_bits = (bytes[1] >> 6) & 0x3;
+  uint8_t reg_bits = (bytes[1] >> 3) & 0x7;
   uint8_t reg_mem_bits = bytes[1] & 0x7;
-
-  const char *reg = get_register(reg_bits, wide_bit);
+  const char *reg = get_register(reg_bits, w_bit);
   if (reg == NULL) {
     free(decodedInstruction);
     return NULL;
   }
   Mode mode = get_mode(mode_bits, reg_bits);
-  char rm_buf[50];
-  int bytes_used = calc_rm(mode, reg_mem_bits, wide_bit, bytes, rm_buf, 50);
+  char rm_buf[64];
+  int bytes_used = calc_rm(mode, reg_mem_bits, w_bit, bytes, rm_buf, 50);
   if (bytes_used == -1) {
     free(decodedInstruction);
     return NULL;
   }
-    // + 2 for ", ", any + or "[" "]" should be in the r/m or reg instruction
-    // strings
-    switch (direction_bit) {
-    case 0x0:
-      write_scratch_buffer(rm_buf);
-      write_scratch_buffer(", ");
-      write_scratch_buffer(reg);
-      break;
-    case 0x1:
-      write_scratch_buffer(reg);
-      write_scratch_buffer(", ");
-      write_scratch_buffer(rm_buf);
-      break;
-    default:
-      return NULL;
-    }
+  // + 2 for ", ", any + or "[" "]" should be in the r/m or reg instruction
+  // strings
+  switch (direction_bit) {
+  case 0x0:
+    write_scratch_buffer(rm_buf);
+    write_scratch_buffer(", ");
+    write_scratch_buffer(reg);
+    break;
+  case 0x1:
+    write_scratch_buffer(reg);
+    write_scratch_buffer(", ");
+    write_scratch_buffer(rm_buf);
+    break;
+  default:
+    return NULL;
+  }
 
   // might have to fill in the string for instruction
+  decodedInstruction->instruction =
+      (char *)malloc(sizeof(char) * scratch_buffer_len());
 
-  decodedInstruction->instruction = (char*)malloc(sizeof(char) * scratch_buffer_len());
-  //memset();
+  decodedInstruction->instruction[0] = '\0';
   decodedInstruction->bytes_used = bytes_used;
-  copy_buffer(decodedInstruction->instruction, 0); // CHANGE ME
+  copy_buffer(decodedInstruction->instruction, scratch_buffer_len() + 1);
   return decodedInstruction;
 }
 
-DecodedInstruction *mov_i_rm_parse(uint8_t *_) { return NULL; }
-DecodedInstruction *mov_i_r_parse(uint8_t *_) { return NULL; }
-DecodedInstruction *mov_m_a_parse(uint8_t *_) { return NULL; }
-DecodedInstruction *mov_a_m_parse(uint8_t *_) { return NULL; }
-DecodedInstruction *mov_rm_sr_parse(uint8_t *_) { return NULL; }
-DecodedInstruction *mov_sr_rm_parse(uint8_t *_) { return NULL; }
+DecodedInstruction *mov_i_rm_parse(uint8_t *_) {
+  printf("mov_i_rm_parse\n");
+  return NULL;
+}
+
+//need to account for negative numbers
+DecodedInstruction *mov_i_r_parse(uint8_t *bytes) {
+  printf("mov_i_r_parse\n");
+  DecodedInstruction *decodedInstruction =
+      (DecodedInstruction *)malloc(sizeof(DecodedInstruction));
+  uint8_t w_bit = (bytes[0] >> 3) & 0x1;
+  uint8_t reg_bits = bytes[0] & 0x7;
+  uint8_t disp_lo = bytes[1];
+  int bytes_used = 2;
+  char data_buf[64];
+  const char *reg = get_register(reg_bits, w_bit);
+  if (reg == NULL) {
+    free(decodedInstruction);
+    return NULL;
+  }
+  write_scratch_buffer("MOV ");
+  write_scratch_buffer(reg);
+  write_scratch_buffer(", ");
+  if (w_bit == 1) {
+    uint8_t disp_hi = bytes[2];
+    uint16_t data = (disp_hi << 8) | disp_lo;
+    bytes_used += 1;
+    snprintf(data_buf, 50, "[%d]", data);
+    write_scratch_buffer(data_buf);
+  } else {
+    snprintf(data_buf, 50, "[%d]", disp_lo);
+    write_scratch_buffer(data_buf);
+  }
+  decodedInstruction->instruction =
+      (char *)malloc(sizeof(char) * scratch_buffer_len());
+  decodedInstruction->instruction[0] = '\0';
+  decodedInstruction->bytes_used = bytes_used;
+  copy_buffer(decodedInstruction->instruction, scratch_buffer_len() + 1);
+  return decodedInstruction;
+}
+
+DecodedInstruction *mov_m_a_parse(uint8_t *_) {
+  printf("mov_m_a_parse\n");
+  return NULL;
+}
+DecodedInstruction *mov_a_m_parse(uint8_t *_) {
+  printf("mov_a_m_parse\n");
+  return NULL;
+}
+DecodedInstruction *mov_rm_sr_parse(uint8_t *_) {
+  printf("mov_rm_sr_parse\n");
+  return NULL;
+}
+DecodedInstruction *mov_sr_rm_parse(uint8_t *_) {
+  printf("mov_sr_rm_parse\n");
+  return NULL;
+}
 
 InstructionParser parse_table[7] = {
     mov_rm_r_parse, mov_i_rm_parse,  mov_i_r_parse,   mov_m_a_parse,
     mov_a_m_parse,  mov_rm_sr_parse, mov_sr_rm_parse,
 };
+
+void printBinary(void) { return; }

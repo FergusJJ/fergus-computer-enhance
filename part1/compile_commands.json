@@ -1,12 +1,22 @@
 [
   {
-    "directory": "/Users/fergus.johnson/personal/fergus-computer-enhance/part1",
+    "directory": "/home/fergus/dev/github/fergus-computer-enhance/part1",
+    "command": "gcc -Wall -Wextra -pedantic -I./include -c src/decode.c -o obj/decode.o",
+    "file": "src/decode.c"
+  },
+  {
+    "directory": "/home/fergus/dev/github/fergus-computer-enhance/part1",
     "command": "gcc -Wall -Wextra -pedantic -I./include -c src/file_util.c -o obj/file_util.o",
     "file": "src/file_util.c"
   },
   {
-    "directory": "/Users/fergus.johnson/personal/fergus-computer-enhance/part1",
-    "command": "gcc -Wall -Wextra -pedantic -I./include -c src/hw1.c -o obj/hw1.o",
-    "file": "src/hw1.c"
+    "directory": "/home/fergus/dev/github/fergus-computer-enhance/part1",
+    "command": "gcc -Wall -Wextra -pedantic -I./include -c src/main.c -o obj/main.o",
+    "file": "src/main.c"
+  },
+  {
+    "directory": "/home/fergus/dev/github/fergus-computer-enhance/part1",
+    "command": "gcc -Wall -Wextra -pedantic -I./include -c src/scratch_buffer.c -o obj/scratch_buffer.o",
+    "file": "src/scratch_buffer.c"
   }
 ]

@@ -37,7 +37,7 @@ compile_commands.json: $(SRCS)
 		echo "    \"file\": \"$$src\"" >> $@; \
 		echo "  }," >> $@; \
 	done
-	@sed -i '' '$$s/,$$//' $@
+	@sed -i '$$s/,$$//' $@
 	@echo "]" >> $@
 
 # Cleaning up

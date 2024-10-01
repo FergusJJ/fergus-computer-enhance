@@ -11,6 +11,7 @@ typedef enum Mode {
   MEM_8BIT_DISP,
   MEM_16BIT_DISP,
   REG_NO_DISP,
+  MODE_NULL,
 } Mode;
 
 typedef struct DecodedInstruction {
@@ -31,6 +32,7 @@ typedef enum Opcode {
 } Opcode;
 
 Opcode parse_opcode(uint8_t byt);
+void show_opcode(Opcode opcode);
 
 typedef DecodedInstruction *(*InstructionParser)(uint8_t *);
 DecodedInstruction *mov_rm_r_parse(uint8_t *_);
